@@ -1,154 +1,150 @@
 import httpx
 import asyncio
 import os
-import json
 from typing import AsyncGenerator
 from app.core.config import settings
 
+
 class LLMService:
     def __init__(self):
-        self.render_url = "https://6399df36b31b.ngrok-free.app"
-        # Use your API key - priority: env var > config
-        self.api_key = os.getenv("RENDER_API_KEY", settings.punjab_api_key)
-        
+        # Priority: ENV > settings
+        self.render_url = os.getenv("RENDER_URL", settings.render_url)
+        self.api_key = os.getenv("RENDER_API_KEY", settings.render_api_key)
+
         if self.api_key and self.api_key != "YOUR_API_KEY_HERE":
-            print(f"✅ Punjab Text Book API configured")
+            print("✅ Render Textbook API configured")
             print(f"   Key: {self.api_key[:3]}***")
             print(f"   URL: {self.render_url}")
         else:
             print("❌ ERROR: No valid API key found!")
             print("   Please set RENDER_API_KEY in .env file")
-            print("   Example: RENDER_API_KEY=punjab123")
-    
-    async def generate_response(self, messages: list, session_id: str = None, query: str = None, stream: bool = True) -> AsyncGenerator[str, None]:
-        """Generate response using Punjab Text Book API"""
-        
-        # Get user query
+            print("   Example: RENDER_API_KEY=rameez-secret-key-2026")
+
+    async def generate_response(
+        self,
+        messages: list,
+        session_id: str | None = None,
+        query: str | None = None,
+        stream: bool = True
+    ) -> AsyncGenerator[str, None]:
+        """Generate response using Render-hosted Punjab Textbook API"""
+
+        # Extract user query
         user_query = query or ""
         if not user_query:
             for msg in reversed(messages):
                 if msg.get("sender") == "user":
                     user_query = msg.get("content", "")
                     break
-        
+
         if not user_query:
-            yield "Please ask a question about Punjab textbooks."
+            yield "Please ask a question related to Punjab textbooks."
             return
-        
-        # Check if API key is configured
+
+        # Validate API key
         if not self.api_key or self.api_key == "YOUR_API_KEY_HERE":
-            yield """📚 **Textbook Assistant Not Configured**
-            
-Please set up the API key in the backend/.env file:
-
-RENDER_API_KEY= rameez-secret-key-2026
-RENDER_URL=https://6399df36b31b.ngrok-free.app
-
-Then restart the server."""
+            yield (
+                "📚 **Textbook Assistant Not Configured**\n\n"
+                "Please set the following in `backend/.env`:\n\n"
+                "RENDER_API_KEY=rameez-secret-key-2026\n"
+                "RENDER_URL=https://6399df36b31b.ngrok-free.app\n\n"
+                "Then restart the server."
+            )
             return
-        
+
         try:
-            # Prepare request - EXACTLY as your API expects
             url = f"{self.render_url}/ask"
             headers = {
                 "Content-Type": "application/json",
-                "x-api-key": self.api_key  # Must be lowercase with hyphens
+                "x-api-key": self.api_key
             }
-            payload = {"question": user_query, "k": 3}
-            
-            print(f"\n📤 [Textbook API] Question: {user_query[:60]}...")
+            payload = {
+                "question": user_query,
+                "k": 3
+            }
+
+            print(f"\n📤 [Render API] Question: {user_query[:80]}...")
             print(f"   URL: {url}")
-            print(f"   Headers: x-api-key: {self.api_key[:3]}***")
-            
-            # Make request with timeout
+            print(f"   API Key: {self.api_key[:3]}***")
+
             timeout = httpx.Timeout(30.0, connect=10.0)
-            
+
             async with httpx.AsyncClient(timeout=timeout) as client:
                 response = await client.post(url, json=payload, headers=headers)
-                
-                print(f"   Status: {response.status_code}")
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    print(f"   ✅ Response received")
-                    
-                    # Extract answer based on your API's response format
-                    answer = data.get("answer", "").strip()
-                    reference = data.get("reference", "").strip()
-                    
-                    # Format the response
-                    if answer:
-                        # Remove bullet if present
-                        if answer.startswith("• "):
-                            answer = answer[2:]
-                        
-                        formatted = answer
-                        
-                        # Add reference if available
-                        if reference:
-                            formatted += f"\n\n📚 *{reference}*"
-                        
-                        # Add note about textbook source
-                        formatted += "\n\n💡 *Answer based on Punjab Textbook Board content*"
-                        
-                    else:
-                        formatted = "I couldn't find a specific answer in the Punjab textbooks for that question."
-                    
-                    # Stream or return complete
-                    if stream:
-                        words = formatted.split()
-                        for word in words:
-                            yield word + " "
-                            await asyncio.sleep(0.02)
-                    else:
-                        yield formatted
-                        
-                elif response.status_code == 401:
-                    error_msg = "Invalid API key. Please check RENDER_API_KEY in .env file."
-                    print(f"   ❌ {error_msg}")
-                    yield f"🔐 {error_msg}\n\nCurrent key: {self.api_key[:3]}***"
-                    
+
+            print(f"   Status: {response.status_code}")
+
+            if response.status_code == 200:
+                data = response.json()
+
+                answer = data.get("answer", "").strip()
+                reference = data.get("reference", "").strip()
+
+                if answer.startswith("• "):
+                    answer = answer[2:]
+
+                if answer:
+                    formatted = answer
+                    if reference:
+                        formatted += f"\n\n📚 *{reference}*"
+                    formatted += "\n\n💡 *Based on Punjab Textbook Board content*"
                 else:
-                    error_msg = f"API Error {response.status_code}"
-                    try:
-                        error_data = response.json()
-                        detail = error_data.get("detail", str(error_data))
-                        error_msg = f"{error_msg}: {detail}"
-                    except:
-                        error_text = response.text[:200]
-                        error_msg = f"{error_msg}: {error_text}"
-                    
-                    print(f"   ❌ {error_msg}")
-                    yield f"⚠️ Textbook service error: {error_msg}"
-                        
+                    formatted = (
+                        "I couldn't find a specific answer in the Punjab textbooks "
+                        "for that question."
+                    )
+
+                if stream:
+                    for word in formatted.split():
+                        yield word + " "
+                        await asyncio.sleep(0.02)
+                else:
+                    yield formatted
+
+            elif response.status_code == 401:
+                yield (
+                    "🔐 **Invalid API Key**\n\n"
+                    "Please check `RENDER_API_KEY` in `.env`.\n"
+                    f"Current key: {self.api_key[:3]}***"
+                )
+
+            else:
+                try:
+                    error_data = response.json()
+                    detail = error_data.get("detail", error_data)
+                except Exception:
+                    detail = response.text[:200]
+
+                yield f"⚠️ Textbook service error ({response.status_code}): {detail}"
+
         except httpx.RequestError as e:
-            print(f"   ❌ Network error: {e}")
-            yield "🔌 Cannot connect to textbook service. The service might be down."
+            print(f"❌ Network error: {e}")
+            yield "🔌 Cannot connect to textbook service. Service may be down."
+
         except Exception as e:
-            print(f"   ❌ Unexpected error: {e}")
-            yield f"An error occurred: {str(e)[:100]}"
+            print(f"❌ Unexpected error: {e}")
+            yield f"⚠️ Unexpected error: {str(e)[:120]}"
+
 
 llm_service = LLMService()
 
-# Test function
+
+# -------------------------------
+# Test utility
+# -------------------------------
 async def test_connection():
-    """Test the API connection"""
-    service = LLMService()
-    
-    if not service.api_key or service.api_key == "YOUR_API_KEY_HERE":
-        print("❌ No API key configured")
-        return
-    
-    print("\n🧪 Testing connection to Punjab Text Book API...")
-    
-    test_messages = [{"sender": "user", "content": "What is science?"}]
-    
+    print("\n🧪 Testing Render Textbook API connection...")
+
+    messages = [{"sender": "user", "content": "What is science?"}]
+
     try:
-        async for chunk in service.generate_response(test_messages, stream=False):
-            print(f"✅ Test response: {chunk[:100]}...")
+        async for response in llm_service.generate_response(messages, stream=False):
+            print("✅ Response received:")
+            print(response[:300])
             return True
     except Exception as e:
         print(f"❌ Test failed: {e}")
         return False
 
-# To run test: asyncio.run(test_connection())
+# Run manually:
+# asyncio.run(test_connection())
