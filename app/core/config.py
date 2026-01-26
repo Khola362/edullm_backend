@@ -11,11 +11,11 @@ class Settings:
         self.database_url: str = os.getenv("DATABASE_URL", "sqlite:///./edullms.db")
         
         # Punjab Text Book API - YOUR SETTINGS
-        self.punjab_api_key: str = os.getenv("RENDER_API_KEY", "punjab123")  # Your key
-        self.punjab_api_url: str = os.getenv("RENDER_URL", "https://punjab-text-book.onrender.com")
+        self.punjab_api_key: str = os.getenv("RENDER_API_KEY", "rameez-secret-key-2026")  # Your key
+        self.punjab_api_url: str = os.getenv("RENDER_URL", "https://6399df36b31b.ngrok-free.app")
         
         # JWT
-        self.secret_key: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+        self.secret_key: str = os.getenv("SECRET_KEY", "rameez-secret-key-2026")
         self.algorithm: str = "HS256"
         self.access_token_expire_minutes: int = 30
         
