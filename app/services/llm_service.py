@@ -7,7 +7,7 @@ from app.core.config import settings
 
 class LLMService:
     def __init__(self):
-        self.render_url = "https://punjabtextbook-production.up.railway.app"
+        self.render_url = "https://6399df36b31b.ngrok-free.app"
         # Use your API key - priority: env var > config
         self.api_key = os.getenv("RENDER_API_KEY", settings.punjab_api_key)
         
@@ -41,8 +41,8 @@ class LLMService:
             
 Please set up the API key in the backend/.env file:
 
-RENDER_API_KEY=punjab123
-RENDER_URLhttps://punjabtextbook-production.up.railway.app
+RENDER_API_KEY= rameez-secret-key-2026
+RENDER_URL=https://6399df36b31b.ngrok-free.app
 
 Then restart the server."""
             return
