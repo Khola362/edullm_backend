@@ -41,7 +41,11 @@ class LLMService:
         payload = {"question": user_query, "k": 3}
 
         async with httpx.AsyncClient(timeout=30) as client:
-            response = await client.post(url, json=payload, headers=headers)
+            response = await client.post(
+                url,
+                json={"question": user_query, "k": 3},
+                headers=headers
+            )
 
         if response.status_code != 200:
             yield f"Punjab API error: {response.status_code}"
