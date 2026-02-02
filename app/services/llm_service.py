@@ -6,7 +6,8 @@ import re
 
 class LLMService:
     def __init__(self):
-        self.render_url = settings.punjab_api_url
+        # Use the ngrok URL directly (update in your settings)
+        self.render_url = settings.punjab_api_url  # Should be "https://ff86781a790d.ngrok-free.app"
         self.api_key = settings.punjab_api_key
         print("✅ LLMService initialized")
         print(f"   URL: {self.render_url}")
@@ -31,20 +32,40 @@ class LLMService:
             yield "Please ask a Punjab textbook question."
             return
 
-        url = f"{self.render_url}/ask"
-        headers = {"Content-Type": "application/json", "x-api-key": self.api_key}
-        payload = {"question": user_query, "top_k": 3, "session_id": session_id or "default"}
+        # Use the correct endpoint - no need to add "/ask" if it's already in the base URL
+        url = self.render_url
+        if not url.endswith("/ask"):
+            url = f"{self.render_url}/ask"
+            
+        headers = {
+            "Content-Type": "application/json", 
+            "x-api-key": self.api_key,
+            "User-Agent": "EduMentor-AI/1.0"  # Add user agent
+        }
+        
+        payload = {
+            "question": user_query, 
+            "top_k": 3, 
+            "session_id": session_id or "default"
+        }
+
+        print(f"📡 Calling API: {url}")
+        print(f"📤 Payload: {payload}")
 
         try:
             async with httpx.AsyncClient(timeout=60.0) as client:
                 response = await client.post(url, json=payload, headers=headers)
+                print(f"📥 Response status: {response.status_code}")
+                
                 if response.status_code != 200:
-                    yield f"Punjab API error: {response.status_code}"
+                    yield f"Punjab API error: {response.status_code} - {response.text}"
                     return
 
                 data = response.json()
                 answer = data.get("answer", "")
+                print(f"📝 Answer length: {len(answer)} chars")
 
+                # ... rest of your parsing logic ...
                 # Split sections using markers
                 book_answer = teacher_explanation = solved_example = final_answer = ""
 
@@ -85,16 +106,20 @@ class LLMService:
                     for section in sections:
                         for word in section.split():
                             yield word + " "
+                            await asyncio.sleep(0.01)  # Small delay for streaming effect
                         yield "\n"
                 else:
                     yield "\n".join(sections)
 
         except httpx.TimeoutException:
             yield "❌ Punjab API timeout. Please try again."
+            print("⏰ Timeout occurred")
         except httpx.RequestError as e:
             yield "❌ Connection error. Please check Punjab API availability."
+            print(f"🔌 Request error: {e}")
         except Exception as e:
             yield f"❌ Unexpected error: {e}"
+            print(f"💥 Unexpected error: {e}")
 
 
 # Create instance
